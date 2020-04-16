@@ -118,7 +118,7 @@ class GeneticAlgorithm:
         selected.extend(heapq.nsmallest(self.elitism_rate, self.population))
         return selected
 
-    def crossover_chunk(self, parent1, parent2):
+    def one_point_crossover(self, parent1, parent2):
         cross_point = random.randint(1, self.num_vertices - 1)
         child1_code = parent1.code[:cross_point] + parent2.code[cross_point:]
         child2_code = parent2.code[:cross_point] + parent1.code[cross_point:]
@@ -171,13 +171,20 @@ class GeneticAlgorithm:
                 chromosome[i] = random.choice(self.possible_gene_values)
         return chromosome
 
+    def is_conflicting(self, chromosome, i):
+        for j in self.adjacency_list[i]:
+            if chromosome.code[i] == chromosome.code[j]:
+                return True
+        return False
+
     def generate_neighbourhood(self, chromosome, tabu_list):
         nbhd = []
         moves = []
         for i in range(len(chromosome.code)):
-            available_colors = self.get_available_colors(chromosome.code, i)
-            for color in available_colors:
-                moves.append((i, color))
+            if self.is_conflicting(chromosome, i):
+                available_colors = self.get_available_colors(chromosome.code, i)
+                for color in available_colors:
+                    moves.append((i, color))
 
         moves = list(set(moves) - set(tabu_list))
 
@@ -196,16 +203,19 @@ class GeneticAlgorithm:
             if current_solution.fitness < best_solution.fitness:
                 best_solution = current_solution
             nbhd, moves = self.generate_neighbourhood(chromosome, tabu_list)
-            current_solution = self.select_best_chromosome(nbhd)
-            index_of_current_solution = nbhd.index(current_solution)
-            tabu_list.append(moves[index_of_current_solution])
+            if len(nbhd) > 0:
+                current_solution = self.select_best_chromosome(nbhd)
+                index_of_current_solution = nbhd.index(current_solution)
+                tabu_list.append(moves[index_of_current_solution])
         return best_solution
 
     def create_generation(self, reproduction_group):
         current_generation = []
+        current_generation.extend(heapq.nsmallest(self.elitism_rate, self.population))
+
         while len(current_generation) < self.population_size:
             parents = random.sample(reproduction_group, 2)
-            child1, child2 = self.uniform_crossover(parents[0], parents[1])
+            child1, child2 = self.one_point_crossover(parents[0], parents[1])
 
             child1.code = self.mutate(child1.code)
             child2.code = self.mutate(child2.code)
@@ -238,8 +248,41 @@ class GeneticAlgorithm:
         return self.best_chromosome, self.current_iter
 
 def main():
-    graphs = ['myciel3.col','myciel4.col', 'myciel5.col', 'myciel6.col', 'games120.col', 'huck.col', 'jean.col']
-    
+    graph_list = ['myciel3.col','myciel4.col', 'myciel5.col', 'games120.col', 'huck.col', 'jean.col']
+
+    with open('results/results_tabu.txt', 'w') as results:
+        for graph_name in graph_list:
+            timing = []
+            number_of_tests = 10
+            current_test = 0
+            while current_test < number_of_tests:
+                with open("tests/" + str(graph_name), "r") as graph_file:
+                    chromatic_num = int(graph_file.readline())
+                    ga = GeneticAlgorithm(chromatic_num)
+                    ga.num_vertices = int(graph_file.readline().split(" ")[0])
+                    for i in range(ga.num_vertices):
+                        ga.adjacency_list[i] = []
+                    for line in graph_file:
+                        edge = list(map(int, line.split(" ")))
+                        ga.adjacency_list[edge[0] - 1].append(edge[1] - 1)
+
+                print('------------------------------------')
+                print(graph_name, "test:", current_test + 1)
+                start = time.time()
+                solution, iters = ga.optimize()
+                end = time.time()
+                iter_time = end - start
+                print('solution: ', solution.code)
+                print('fitness: ', solution.fitness)
+                print('time: ', iter_time)
+                print('iters: ', iters)
+                if iters < ga.max_iters:
+                    timing.append(iter_time)
+                    current_test += 1
+
+
+            results.write(graph_name + "\n")
+            results.write(str(timing) + "\n")
 
 if __name__ == '__main__':
     main()

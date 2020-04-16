@@ -24,12 +24,12 @@ class Chromosome:
 class GeneticAlgorithm:
     def __init__(self, chromatic_num):
         # Tunable genetic algorithm parameters.
-        self.max_iters = 1000
+        self.max_iters = 100
         self.population_size = 50
-        self.reproduction_size = 20
-        self.elitism_rate = 5
-        self.mutation_rate = 0.4
-        self.tournament_size = 10
+        self.reproduction_size = 25
+        self.elitism_rate = 3
+        self.mutation_rate = 0.7
+        self.tournament_size = 4
 
         # Other GA attributes.
         self.chromatic_num = chromatic_num
@@ -83,7 +83,7 @@ class GeneticAlgorithm:
         selected.extend(heapq.nsmallest(self.elitism_rate, self.population))
         return selected
 
-    def crossover_chunk(self, parent1, parent2):
+    def one_point_crossover(self, parent1, parent2):
         # Problem je bio u odabiru najboljeg hromozoma - nije bilo
         # potrebno da se i tu koristi konstruktor za hromozom, jer se onda
         # dobije neka cudna konstrukcija i parent1.code nije tipa lista, nego
@@ -142,9 +142,10 @@ class GeneticAlgorithm:
 
     def create_generation(self, reproduction_group):
         current_generation = []
+        current_generation.extend(heapq.nsmallest(self.elitism_rate, self.population))
         while len(current_generation) < self.population_size:
             parents = random.sample(reproduction_group, 2)
-            child1, child2 = self.crossover_chunk(parents[0], parents[1])
+            child1, child2 = self.one_point_crossover(parents[0], parents[1])
 
             child1.code = self.mutate(child1.code)
             child2.code = self.mutate(child2.code)
@@ -172,7 +173,41 @@ class GeneticAlgorithm:
         return self.best_chromosome, self.current_iter
 
 def main():
-    graphs = ['myciel3.col','myciel4.col', 'myciel5.col', 'myciel6.col', 'games120.col', 'huck.col', 'jean.col']
+    graph_list = ['myciel3.col','myciel4.col', 'myciel5.col', 'games120.col', 'huck.col', 'jean.col']
+
+    with open('results/results_simple.txt', 'w') as results:
+        for graph_name in graph_list:
+            timing = []
+            number_of_tests = 10
+            current_test = 0
+            while current_test < number_of_tests:
+                with open("tests/" + str(graph_name), "r") as graph_file:
+                    chromatic_num = int(graph_file.readline())
+                    ga = GeneticAlgorithm(chromatic_num)
+                    ga.num_vertices = int(graph_file.readline().split(" ")[0])
+                    for i in range(ga.num_vertices):
+                        ga.adjacency_list[i] = []
+                    for line in graph_file:
+                        edge = list(map(int, line.split(" ")))
+                        ga.adjacency_list[edge[0] - 1].append(edge[1] - 1)
+
+                print('------------------------------------')
+                print(graph_name, "test:", current_test + 1)
+                start = time.time()
+                solution, iters = ga.optimize()
+                end = time.time()
+                iter_time = end - start
+                print('solution: ', solution.code)
+                print('fitness: ', solution.fitness)
+                print('time: ', iter_time)
+                print('iters: ', iters)
+                if iters < ga.max_iters:
+                    timing.append(iter_time)
+                    current_test += 1
+
+
+            results.write(graph_name + "\n")
+            results.write(str(timing) + "\n")
 
 if __name__ == '__main__':
     main()
