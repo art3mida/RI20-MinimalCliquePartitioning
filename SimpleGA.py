@@ -169,11 +169,12 @@ class GeneticAlgorithm:
             reproduction_group = self.tournament_selection()
             self.population = self.create_generation(reproduction_group)
             self.best_chromosome = self.select_best_chromosome(self.population)
+            self.current_iter += 1
 
         return self.best_chromosome, self.current_iter
 
 def main():
-    graph_list = ['myciel3.col','myciel4.col', 'myciel5.col', 'games120.col', 'huck.col', 'jean.col']
+    graph_list = ['myciel3.col','myciel4.col', 'myciel5.col', 'games120.col', 'huck.col', 'jean.col', 'brute1.txt']
 
     with open('results/results_simple.txt', 'w') as results:
         for graph_name in graph_list:
@@ -201,6 +202,7 @@ def main():
                 print('fitness: ', solution.fitness)
                 print('time: ', iter_time)
                 print('iters: ', iters)
+                # If valid solution
                 if iters < ga.max_iters:
                     timing.append(iter_time)
                     current_test += 1

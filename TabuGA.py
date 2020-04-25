@@ -81,7 +81,7 @@ class GeneticAlgorithm:
         # Additional LS and graph parameters.
         self.num_vertices = 0
         self.adjacency_list = {}
-        self.tabu_quality_boundary = 5
+        self.tabu_quality_boundary = 10
         self.max_tabu_iters = 4
 
     def create_initial_population(self):
@@ -244,16 +244,17 @@ class GeneticAlgorithm:
             reproduction_group = self.tournament_selection()
             self.population = self.create_generation(reproduction_group)
             self.best_chromosome = self.select_best_chromosome(self.population)
+            self.current_iter += 1
 
         return self.best_chromosome, self.current_iter
 
 def main():
-    graph_list = ['myciel3.col','myciel4.col', 'myciel5.col', 'games120.col', 'huck.col', 'jean.col']
+    graph_list = ['myciel3.col','myciel4.col', 'myciel5.col', 'games120.col', 'huck.col', 'jean.col', 'brute1.txt']
 
     with open('results/results_tabu.txt', 'w') as results:
         for graph_name in graph_list:
             timing = []
-            number_of_tests = 10
+            number_of_tests = 50
             current_test = 0
             while current_test < number_of_tests:
                 with open("tests/" + str(graph_name), "r") as graph_file:
@@ -276,6 +277,7 @@ def main():
                 print('fitness: ', solution.fitness)
                 print('time: ', iter_time)
                 print('iters: ', iters)
+                # If valid solution
                 if iters < ga.max_iters:
                     timing.append(iter_time)
                     current_test += 1
